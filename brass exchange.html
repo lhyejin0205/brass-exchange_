@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>브라스 익스체인지</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b120e;
+    --panel: #12201a;
+    --border: #3a4a3d;
+    --text: #ece5d6;
+    --gold: #c9a227;
+    --up: #4f9d78;
+    --down: #b1493f;
+    --accent: #4a3d1f;
+    --muted: #8b9d90;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b120e;
+      --panel: #12201a;
+      --border: #3a4a3d;
+      --text: #ece5d6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b120e;
+    --panel: #12201a;
+    --border: #3a4a3d;
+    --text: #ece5d6;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    min-height: 100%;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 36px 14px;
+    background-image: radial-gradient(circle at 50% 0%, rgba(201,162,39,0.06), transparent 55%);
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--gold);
+    margin: 0 0 16px;
+    letter-spacing: 0.3px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid rgba(201,162,39,0.22);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    text-align: center;
+  }
+  .stats > div + div { border-left: 1px solid rgba(201,162,39,0.22); }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.4px;
+  }
+
+  .stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 17px;
+    margin-top: 4px;
+    word-break: break-all;
+  }
+
+  #money-val { color: var(--gold); }
+  #inv-val { color: var(--text); }
+  #time-val { color: var(--text); }
+
+  .market {
+    text-align: center;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    height: 84px;
+    margin: 4px 0 8px;
+    overflow: hidden;
+  }
+
+  .price-bar {
+    width: 12px;
+    border-radius: 2px 2px 0 0;
+    background: rgba(201,162,39,0.32);
+    transition: height 0.15s linear, background 0.15s linear;
+  }
+  .price-bar.current { background: var(--gold); }
+
+  .price-now {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 28px;
+  }
+  .price-now.up { color: var(--up); }
+  .price-now.down { color: var(--down); }
+  .price-now.flat { color: var(--text); }
+
+  .price-caption {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 13px 8px;
+    border: 1px solid rgba(201,162,39,0.25);
+    border-radius: 5px;
+    background: var(--accent);
+    color: var(--text);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  button:hover:not(:disabled) { border-color: var(--gold); }
+  button:active { transform: translateY(1px); }
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  #buy-btn { background: rgba(79,157,120,0.18); border-color: rgba(79,157,120,0.5); }
+  #sell-btn { background: rgba(177,73,63,0.18); border-color: rgba(177,73,63,0.5); }
+  #sell-btn.profit { background: rgba(79,157,120,0.22); border-color: var(--up); color: var(--up); }
+  #sell-btn.loss { background: rgba(177,73,63,0.22); border-color: var(--down); color: var(--down); }
+  #sell-btn.neutral { background: var(--accent); border-color: rgba(201,162,39,0.25); color: var(--text); }
+
+  .diff-btn {
+    font-size: 13px;
+    padding: 10px 4px;
+    background: var(--panel);
+    border: 1px solid rgba(201,162,39,0.25);
+    color: var(--muted);
+  }
+  .diff-btn.selected {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,162,39,0.12);
+  }
+
+  #avgcost-val { color: var(--text); }
+  #pnl-val.pos { color: var(--up); }
+  #pnl-val.neg { color: var(--down); }
+
+  .float-pnl {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    animation: floatUp 0.9s ease-out forwards;
+  }
+  .float-pnl.pos { color: var(--up); }
+  .float-pnl.neg { color: var(--down); }
+  @keyframes floatUp {
+    0% { opacity: 1; top: 0; }
+    100% { opacity: 0; top: -34px; }
+  }
+  .reduce-motion .float-pnl { animation: none !important; opacity: 0; }
+
+  .side-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  #pause-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid rgba(201,162,39,0.25);
+  }
+
+  label.reduce {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+
+  .result {
+    text-align: center;
+  }
+
+  .result h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0 0 10px;
+  }
+  .result.success h2 { color: var(--up); }
+  .result.fail h2 { color: var(--down); }
+
+  #best-val {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--gold);
+  }
+
+  #restart-btn {
+    width: 100%;
+    margin-top: 10px;
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #0b120e;
+    font-weight: 600;
+  }
+
+  .flash {
+    animation: flashUp 0.35s ease-out;
+  }
+  @keyframes flashUp {
+    0% { background: rgba(79,157,120,0.35); }
+    100% { background: var(--panel); }
+  }
+  .flash.bad-flash { animation-name: flashDown; }
+  @keyframes flashDown {
+    0% { background: rgba(177,73,63,0.35); }
+    100% { background: var(--panel); }
+  }
+  .reduce-motion .flash {
+    animation: none !important;
+  }
+
+  @media (max-width: 360px) {
+    .stat-value { font-size: 13px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 style="margin-bottom:4px;">브라스 익스체인지 <span style="font-size:0.6em; opacity:0.85;">Brass Exchange</span></h1>
+  <div style="text-align:center; font-size:12px; color:var(--muted); letter-spacing:1.5px; margin-bottom:10px;">PRIVATE INVENTORY EXCHANGE</div>
+  <div style="height:1px; background:linear-gradient(to right, transparent, var(--gold), transparent); opacity:0.45; margin-bottom:20px;"></div>
+
+  <div class="panel" id="intro-overlay">
+    <h2 style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:20px; color:var(--gold); text-align:center; margin-top:0;">게임 방법</h2>
+    <ul style="font-size:16px; line-height:1.7; padding-left:20px; margin:0 0 14px;">
+      <li><b>목표</b>: 30초 안에 자금을 100 → 300으로 불리기</li>
+      <li><b>매입</b>: 지금 가격에 상품 1개를 삼(자금이 줄고 재고가 늘어남)</li>
+      <li><b>매도</b>: 갖고 있는 상품을 지금 가격에 팜(재고가 줄고 자금이 늘어남)</li>
+      <li>화면에 <b>평균 매입가</b>가 표시됨 — 현재 가격이 평균 매입가보다 <b>높으면 매도 버튼이 초록색(이득)</b>, <b>낮으면 빨간색(손해)</b>으로 바뀜</li>
+      <li>매도할 때마다 <b>+N / -N</b> 손익이 화면에 바로 뜸</li>
+      <li><b>추세 화살표</b>(상승↑/하락↓/보합→)로 앞으로 가격이 어느 쪽으로 흐를지 짐작</li>
+      <li><b>⚡급등 / 🔻급락 예고</b>가 뜨면 몇 초 뒤 가격이 크게 튐 — 급등 예고 전에 사두거나, 급락 예고 전에 팔면 유리</li>
+      <li>자금이 0 이하가 되면 바로 실패, 30초 안에 300을 못 채워도 실패</li>
+    </ul>
+
+    <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">난이도 선택 (가격이 바뀌는 속도)</div>
+    <div id="difficulty-group" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
+      <button class="diff-btn" data-diff="easy">쉬움</button>
+      <button class="diff-btn selected" data-diff="normal">중간</button>
+      <button class="diff-btn" data-diff="hard">어려움</button>
+    </div>
+
+    <button id="start-btn" style="width:100%; background:var(--gold); border-color:var(--gold); color:#0b120e; font-weight:600;">시작하기</button>
+  </div>
+
+  <div id="game-area" hidden>
+  <div id="diff-label" style="text-align:center; font-size:13px; color:var(--muted); margin:0 0 10px;">난이도: 중간</div>
+
+  <div class="panel stats" id="stats-panel">
+    <div>
+      <div class="stat-label">자금</div>
+      <div class="stat-value" id="money-val">0</div>
+    </div>
+    <div>
+      <div class="stat-label">보유 재고</div>
+      <div class="stat-value" id="inv-val">0</div>
+    </div>
+    <div>
+      <div class="stat-label">남은 시간</div>
+      <div class="stat-value" id="time-val">30</div>
+    </div>
+  </div>
+
+  <div class="panel stats" id="cost-panel" style="grid-template-columns: 1fr 1fr;">
+    <div>
+      <div class="stat-label">평균 매입가</div>
+      <div class="stat-value" id="avgcost-val">-</div>
+    </div>
+    <div>
+      <div class="stat-label">평가 손익</div>
+      <div class="stat-value" id="pnl-val">0</div>
+    </div>
+  </div>
+
+  <div class="panel market">
+    <div class="price-row" id="price-row" aria-hidden="true"></div>
+    <div style="position:relative;">
+      <div class="price-now flat" id="price-now">0</div>
+      <div id="float-layer" style="position:absolute; inset:0; pointer-events:none; overflow:visible;"></div>
+    </div>
+    <div class="price-caption">현재 가격 (1개당)</div>
+    <div class="price-caption" id="trend-label">추세: 보합 →</div>
+    <div class="price-caption" id="event-warning" style="min-height:18px;"></div>
+
+    <div class="controls">
+      <button id="buy-btn">매입</button>
+      <button id="sell-btn">매도</button>
+    </div>
+
+    <div class="side-row">
+      <button id="pause-btn">일시정지</button>
+      <label class="reduce">
+        <input type="checkbox" id="reduce-toggle">
+        효과 줄이기
+      </label>
+    </div>
+  </div>
+
+  <div class="panel result" id="result-panel" hidden>
+    <h2 id="result-title">결과</h2>
+    <p id="result-desc"></p>
+    <p>최고 기록: <span id="best-val">0</span></p>
+    <button id="restart-btn">같은 난이도로 다시 시작</button>
+    <button id="change-diff-btn" style="width:100%; margin-top:8px; background:transparent; border:1px solid var(--border);">난이도 바꾸기</button>
+  </div>
+
+  <div class="panel" style="text-align:center; font-size:13px; color:var(--muted);">
+    30초 안에 목표 자금에 도달하세요. 자금이 0 이하가 되면 즉시 실패합니다.
+  </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- 설정값 (난이도 변수: PRICE_UPDATE_MS 하나만 조정 대상) ----
+  var START_MONEY = 100;
+  var TARGET_MONEY = 300;
+  var GAME_DURATION_MS = 30000;
+  var PRICE_MIN = 5;
+  var PRICE_MAX = 50;
+  var DIFFICULTY_PRESETS = {
+    easy:   { priceUpdateMs: 1000, label: "쉬움" },
+    normal: { priceUpdateMs: 700,  label: "중간" },
+    hard:   { priceUpdateMs: 450,  label: "어려움" }
+  };
+  var selectedDifficulty = "normal";
+  var PRICE_UPDATE_MS = DIFFICULTY_PRESETS[selectedDifficulty].priceUpdateMs;  // <- 난이도 값 (이 값만 바뀜)
+  var PRICE_STEP_MAX = 9;
+  var BAR_COUNT = 10;
+  var STORAGE_KEY = "tycoon_best_money_v1";
+
+  // 추세 & 이벤트 설정
+  var TREND_MIN_TICKS = 3;
+  var TREND_MAX_TICKS = 7;
+  var EVENT_CHANCE = 0.05;       // 틱마다 이벤트가 예고될 확률(이벤트가 없을 때만)
+  var EVENT_WARNING_TICKS = 3;   // 예고 후 발동까지 남은 가격 틱 수
+  var EVENT_MAGNITUDE_MIN = 15;
+  var EVENT_MAGNITUDE_MAX = 25;
+
+  // ---- DOM ----
+  var moneyEl = document.getElementById("money-val");
+  var invEl = document.getElementById("inv-val");
+  var timeEl = document.getElementById("time-val");
+  var avgCostEl = document.getElementById("avgcost-val");
+  var pnlEl = document.getElementById("pnl-val");
+  var floatLayer = document.getElementById("float-layer");
+  var priceRowEl = document.getElementById("price-row");
+  var priceNowEl = document.getElementById("price-now");
+  var trendLabelEl = document.getElementById("trend-label");
+  var eventWarningEl = document.getElementById("event-warning");
+  var buyBtn = document.getElementById("buy-btn");
+  var sellBtn = document.getElementById("sell-btn");
+  var pauseBtn = document.getElementById("pause-btn");
+  var reduceToggle = document.getElementById("reduce-toggle");
+  var resultPanel = document.getElementById("result-panel");
+  var resultTitle = document.getElementById("result-title");
+  var resultDesc = document.getElementById("result-desc");
+  var bestVal = document.getElementById("best-val");
+  var restartBtn = document.getElementById("restart-btn");
+  var changeDiffBtn = document.getElementById("change-diff-btn");
+  var statsPanel = document.getElementById("stats-panel");
+  var introOverlay = document.getElementById("intro-overlay");
+  var diffButtons = document.querySelectorAll(".diff-btn");
+  var diffLabelEl = document.getElementById("diff-label");
+  var gameArea = document.getElementById("game-area");
+  var startBtn = document.getElementById("start-btn");
+  var body = document.body;
+
+  // ---- 상태 ----
+  var state = {
+    money: START_MONEY,
+    inventory: 0,
+    avgCost: 0,
+    price: 20,
+    priceHistory: [],
+    timeLeftMs: GAME_DURATION_MS,
+    running: false,
+    paused: false,
+    ended: false,
+    trendDir: 0,          // -1 하락, 0 보합, 1 상승
+    trendTicksLeft: 0,
+    pendingEvent: null     // {type:'surge'|'crash', ticksLeft}
+  };
+
+  function pickNewTrend() {
+    var r = Math.random();
+    if (r < 0.4) state.trendDir = 1;
+    else if (r < 0.8) state.trendDir = -1;
+    else state.trendDir = 0;
+    state.trendTicksLeft = TREND_MIN_TICKS + Math.floor(Math.random() * (TREND_MAX_TICKS - TREND_MIN_TICKS + 1));
+  }
+
+  var priceTimer = null;
+  var tickTimer = null;
+  var lastTick = null;
+
+  // ---- 저장(최고 기록) : 손상/빈 값 안전 처리 ----
+  function loadBest() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw === null || raw === undefined || raw === "") return 0;
+      var parsed = JSON.parse(raw);
+      if (typeof parsed !== "number" || isNaN(parsed) || parsed < 0) return 0;
+      return parsed;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function saveBest(value) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    } catch (e) {
+      // 저장 실패해도 게임은 계속 진행
+    }
+  }
+
+  var best = loadBest();
+  bestVal.textContent = best;
+
+  // ---- 접근성: 효과 줄이기 ----
+  var prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReduced) {
+    reduceToggle.checked = true;
+    body.classList.add("reduce-motion");
+  }
+  reduceToggle.addEventListener("change", function () {
+    body.classList.toggle("reduce-motion", reduceToggle.checked);
+  });
+
+  // ---- 렌더 ----
+  function buildBars() {
+    priceRowEl.innerHTML = "";
+    for (var i = 0; i < BAR_COUNT; i++) {
+      var bar = document.createElement("div");
+      bar.className = "price-bar";
+      bar.style.height = "4px";
+      priceRowEl.appendChild(bar);
+    }
+  }
+  buildBars();
+
+  function render() {
+    moneyEl.textContent = Math.max(0, Math.round(state.money));
+    invEl.textContent = state.inventory;
+    timeEl.textContent = Math.max(0, Math.ceil(state.timeLeftMs / 1000));
+
+    var pct = (state.price - PRICE_MIN) / (PRICE_MAX - PRICE_MIN);
+    pct = Math.max(0, Math.min(1, pct));
+    priceNowEl.textContent = Math.round(state.price);
+
+    var trend = "flat";
+    var hist = state.priceHistory;
+    if (hist.length >= 2) {
+      if (hist[hist.length - 1] > hist[hist.length - 2]) trend = "up";
+      else if (hist[hist.length - 1] < hist[hist.length - 2]) trend = "down";
+    }
+    priceNowEl.className = "price-now " + trend;
+
+    if (state.trendDir === 1) trendLabelEl.textContent = "추세: 상승 ↑";
+    else if (state.trendDir === -1) trendLabelEl.textContent = "추세: 하락 ↓";
+    else trendLabelEl.textContent = "추세: 보합 →";
+
+    if (state.pendingEvent) {
+      eventWarningEl.textContent = state.pendingEvent.type === "surge" ? "⚡ 급등 임박!" : "🔻 급락 임박!";
+      eventWarningEl.style.color = state.pendingEvent.type === "surge" ? "var(--up)" : "var(--down)";
+    } else {
+      eventWarningEl.textContent = "";
+    }
+
+    var bars = priceRowEl.children;
+    var histSlice = hist.slice(-BAR_COUNT);
+    var trendColor = trend === "up" ? "var(--up)" : (trend === "down" ? "var(--down)" : "var(--gold)");
+    for (var i = 0; i < bars.length; i++) {
+      var v = histSlice[i];
+      if (v === undefined) {
+        bars[i].style.height = "3px";
+        bars[i].style.background = "rgba(201,162,39,0.15)";
+        continue;
+      }
+      var p = (v - PRICE_MIN) / (PRICE_MAX - PRICE_MIN);
+      p = Math.max(0, Math.min(1, p));
+      bars[i].style.height = Math.max(3, Math.round(p * 78)) + "px";
+      bars[i].style.background = (i === bars.length - 1) ? trendColor : "rgba(201,162,39,0.32)";
+    }
+
+    buyBtn.disabled = !state.running || state.ended || state.paused || state.money < state.price;
+    sellBtn.disabled = !state.running || state.ended || state.paused || state.inventory <= 0;
+    pauseBtn.textContent = state.paused ? "재개" : "일시정지";
+    pauseBtn.disabled = !state.running || state.ended;
+
+    if (state.inventory > 0) {
+      avgCostEl.textContent = Math.round(state.avgCost);
+      var unrealized = Math.round((state.price - state.avgCost) * state.inventory);
+      pnlEl.textContent = (unrealized > 0 ? "+" : "") + unrealized;
+      pnlEl.className = "stat-value " + (unrealized > 0 ? "pos" : (unrealized < 0 ? "neg" : ""));
+
+      if (state.price > state.avgCost) sellBtn.className = sellBtn.className.replace(/\b(profit|loss|neutral)\b/g, "").trim() + " profit";
+      else if (state.price < state.avgCost) sellBtn.className = sellBtn.className.replace(/\b(profit|loss|neutral)\b/g, "").trim() + " loss";
+      else sellBtn.className = sellBtn.className.replace(/\b(profit|loss|neutral)\b/g, "").trim() + " neutral";
+    } else {
+      avgCostEl.textContent = "-";
+      pnlEl.textContent = "0";
+      pnlEl.className = "stat-value";
+      sellBtn.className = sellBtn.className.replace(/\b(profit|loss|neutral)\b/g, "").trim();
+    }
+  }
+
+  // ---- 가격 변동 ----
+  function stepPrice() {
+    // 추세 갱신
+    if (state.trendTicksLeft <= 0) {
+      pickNewTrend();
+    } else {
+      state.trendTicksLeft -= 1;
+    }
+
+    // 이벤트 처리: 예고 중이면 카운트다운, 아니면 새 예고를 걸 확률 판정
+    var eventDelta = 0;
+    if (state.pendingEvent) {
+      state.pendingEvent.ticksLeft -= 1;
+      if (state.pendingEvent.ticksLeft <= 0) {
+        var magnitude = EVENT_MAGNITUDE_MIN + Math.random() * (EVENT_MAGNITUDE_MAX - EVENT_MAGNITUDE_MIN);
+        eventDelta = state.pendingEvent.type === "surge" ? magnitude : -magnitude;
+        state.pendingEvent = null;
+      }
+    } else if (Math.random() < EVENT_CHANCE) {
+      state.pendingEvent = {
+        type: Math.random() < 0.5 ? "surge" : "crash",
+        ticksLeft: EVENT_WARNING_TICKS
+      };
+    }
+
+    // 추세 기반 이동 + 잡음 + 이벤트 변동
+    var trendStep = state.trendDir * (PRICE_STEP_MAX * 0.6);
+    var noise = (Math.random() * 2 - 1) * (PRICE_STEP_MAX * 0.5);
+    var delta = trendStep + noise + eventDelta;
+
+    var next = state.price + delta;
+    next = Math.max(PRICE_MIN, Math.min(PRICE_MAX, next));
+    state.price = next;
+    state.priceHistory.push(next);
+    if (state.priceHistory.length > 200) state.priceHistory.shift();
+    render();
+  }
+
+  function startPriceTimer() {
+    stopPriceTimer();
+    priceTimer = setInterval(function () {
+      if (!state.running || state.paused || state.ended) return;
+      stepPrice();
+    }, PRICE_UPDATE_MS);
+  }
+  function stopPriceTimer() {
+    if (priceTimer) { clearInterval(priceTimer); priceTimer = null; }
+  }
+
+  // ---- 메인 타이머 (performance.now 기반, 드리프트 최소화) ----
+  function startTickTimer() {
+    stopTickTimer();
+    lastTick = performance.now();
+    tickTimer = setInterval(function () {
+      if (!state.running || state.paused || state.ended) { lastTick = performance.now(); return; }
+      var now = performance.now();
+      var delta = now - lastTick;
+      lastTick = now;
+      state.timeLeftMs -= delta;
+      if (state.timeLeftMs <= 0) {
+        state.timeLeftMs = 0;
+        render();
+        endGame(state.money >= TARGET_MONEY);
+        return;
+      }
+      render();
+    }, 100);
+  }
+  function stopTickTimer() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  }
+
+  // ---- 조작 ----
+  function buy() {
+    if (state.ended || state.paused) return;
+    if (state.money < state.price) return;
+    state.avgCost = (state.avgCost * state.inventory + state.price) / (state.inventory + 1);
+    state.money -= state.price;
+    state.inventory += 1;
+    render();
+  }
+
+  function showFloatText(amount) {
+    var el = document.createElement("div");
+    el.className = "float-pnl " + (amount >= 0 ? "pos" : "neg");
+    el.textContent = (amount > 0 ? "+" : "") + amount;
+    floatLayer.appendChild(el);
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 950);
+  }
+
+  function sell() {
+    if (state.ended || state.paused) return;
+    if (state.inventory <= 0) return;
+    var pnl = Math.round(state.price - state.avgCost);
+    state.money += state.price;
+    state.inventory -= 1;
+    if (state.inventory === 0) state.avgCost = 0;
+    render();
+    flashPanel(pnl < 0);
+    showFloatText(pnl);
+    if (state.money <= 0) {
+      endGame(false);
+    }
+  }
+
+  function flashPanel(isBad) {
+    statsPanel.classList.remove("flash", "bad-flash");
+    // reflow to restart animation
+    void statsPanel.offsetWidth;
+    statsPanel.classList.add("flash");
+    if (isBad) statsPanel.classList.add("bad-flash");
+  }
+
+  buyBtn.addEventListener("click", buy);
+  sellBtn.addEventListener("click", sell);
+
+  // ---- 일시정지 ----
+  pauseBtn.addEventListener("click", function () {
+    if (state.ended) return;
+    state.paused = !state.paused;
+    if (!state.paused) lastTick = performance.now();
+    render();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      state.paused = true;
+    } else {
+      if (!state.ended) lastTick = performance.now();
+    }
+    render();
+  });
+
+  // ---- 종료/재시작 ----
+  function endGame(success) {
+    state.ended = true;
+    state.running = false;
+    stopPriceTimer();
+    stopTickTimer();
+
+    if (state.money > best) {
+      best = Math.round(state.money);
+      saveBest(best);
+    }
+    bestVal.textContent = best;
+
+    resultPanel.hidden = false;
+    resultPanel.className = "panel result " + (success ? "success" : "fail");
+    resultTitle.textContent = success ? "성공!" : "실패";
+    resultDesc.textContent = success
+      ? "목표 자금 " + TARGET_MONEY + " 달성! (최종 자금 " + Math.round(state.money) + ")"
+      : "목표 자금 " + TARGET_MONEY + "에 도달하지 못했습니다. (최종 자금 " + Math.max(0, Math.round(state.money)) + ")";
+    render();
+  }
+
+  function resetState() {
+    state.money = START_MONEY;
+    state.inventory = 0;
+    state.avgCost = 0;
+    state.price = 20;
+    state.priceHistory = [];
+    state.timeLeftMs = GAME_DURATION_MS;
+    state.running = true;
+    state.paused = false;
+    state.ended = false;
+    state.pendingEvent = null;
+    pickNewTrend();
+    resultPanel.hidden = true;
+    buildBars();
+    render();
+  }
+
+  function newGame() {
+    resetState();
+    startPriceTimer();
+    startTickTimer();
+  }
+
+  restartBtn.addEventListener("click", newGame);
+
+  changeDiffBtn.addEventListener("click", function () {
+    stopTickTimer();
+    stopPriceTimer();
+    state.running = false;
+    gameArea.hidden = true;
+    introOverlay.hidden = false;
+    resultPanel.hidden = true;
+  });
+
+  for (var di = 0; di < diffButtons.length; di++) {
+    diffButtons[di].addEventListener("click", function () {
+      for (var j = 0; j < diffButtons.length; j++) diffButtons[j].classList.remove("selected");
+      this.classList.add("selected");
+      selectedDifficulty = this.getAttribute("data-diff");
+    });
+  }
+
+  startBtn.addEventListener("click", function () {
+    PRICE_UPDATE_MS = DIFFICULTY_PRESETS[selectedDifficulty].priceUpdateMs;
+    diffLabelEl.textContent = "난이도: " + DIFFICULTY_PRESETS[selectedDifficulty].label;
+    introOverlay.hidden = true;
+    gameArea.hidden = false;
+    newGame();
+  });
+
+  // ---- 초기 화면 ----
+  render();
+})();
+</script>
+</body>
+</html>
